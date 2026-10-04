@@ -1,0 +1,51 @@
+<html>
+    <body>
+        <div>
+            <h1> Category Tree </h1>
+                <div class="action-row">
+                    <button type="button" onclick="handleAction('add')">Add</button>
+                    <button type="button" onclick="handleAction('edit')">Edit</button>
+                    <button type="button" onclick="handleAction('delete')">Delete</button>
+                </div>
+                <form id="django-backend-form" action="/store/" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" id="hidden-action-field">
+                    <div class="group" id="category-select" style="display: none;">
+                    <label id="label-category-select">Category:</label>
+                    <select name="category_id" id="select-category-element" onchange="handleCategoryDropdownChange()">
+                        <option value="">-- Choose Category --</option>
+                        {% for cat in all_categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            <div class="group">
+                    <label>I want to manage a:</label>
+                    <select id="target-type" onchange="updateFormFields()">
+                        <option value="category">Category</option>
+                        <option value="product">Product</option>
+                    </select>
+                </div>
+            <ul class="tree-root">
+            <div class="group" id="product-select" style="display: none;">
+                <label id="label-product-select">Product:</label>
+                <select name="product_id" id="select-product-element">
+                    <option value="">-- Choose Product --</option>
+                    {% for prod in all_products %}
+                        <option value="{{ prod.id }}" data-category="{{ prod.category.id }}">{{ prod.product_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div> 
+        if (id==='category'){
+            category = category: dropdown of existing parent category one who want to add a product under which category they whnt to add 
+            same if edit 
+        }
+        else if(id=='product'){
+            category: dropdown of existing category one who want to add a product under which category they whnt to add 
+            product:dropdown of existing product cat they are adding 
+            same if edit
+        }
+        <script>
+here we don't want to use modal at all simple main root and sub categories in it if add dropdown i want 
+as in our django admin (dropdown)

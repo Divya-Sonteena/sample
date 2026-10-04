@@ -1,0 +1,17 @@
+<li>
+    <div class="{% if dropdown_mode %}dropdown-tree-row{% else %}tree-row{% endif %}">
+        <button type="button" class="tree-toggle" aria-expanded="{% if product.sub_products and not dropdown_mode %}true{% else %}false{% endif %}" aria-label="Expand {{ product.product_name|escape }}">{% if product.sub_products and not dropdown_mode %}▼{% else %}▶{% endif %}</button>
+        {% if dropdown_mode %}
+            <button type="button" class="category-option" data-id="{{ product.id }}" data-type="product" data-name="{{ product.product_name }}">{{ product.product_name }}</button>
+        {% else %}
+            <button type="button" class="tree-node" data-id="{{ product.id }}" data-type="product" data-name="{{ product.product_name }}">{{ product.product_name }}</button>
+        {% endif %}
+    </div>
+    {% if product.sub_products %}
+        <ul class="{% if dropdown_mode %}dropdown-tree-children{% else %}tree-children open{% endif %}">
+            {% for sub_product in product.sub_products %}
+                {% include "product_node.html" with product=sub_product dropdown_mode=dropdown_mode %}
+            {% endfor %}
+        </ul>
+    {% endif %}
+</li>

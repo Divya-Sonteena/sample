@@ -1,0 +1,16 @@
+<li>
+    <div class="dropdown-tree-row">
+        <button type="button" class="tree-toggle" aria-expanded="false" aria-label="Expand {{ node.name|escape }}">▶</button>
+        <button type="button" class="category-option" data-id="{{ node.id }}" data-type="category" data-name="{{ node.name }}">{{ node.name }}</button>
+    </div>
+    {% if node.children or node.products %}
+        <ul class="dropdown-tree-children">
+            {% for child in node.children %}
+                {% include "dropdown.html" with node=child %}
+            {% endfor %}
+            {% for product in node.products %}
+                {% include "product_node.html" with product=product dropdown_mode=True %}
+            {% endfor %}
+        </ul>
+    {% endif %}
+</li>

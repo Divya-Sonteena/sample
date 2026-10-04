@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Category Tree</title>
+    <style>
+        body{font:16px system-ui,sans-serif;margin:28px}
+        .action-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+        .action-row input,.action-row button{font:inherit;padding:9px 12px}
+        .category-dropdown{position:relative;width:min(450px,100%)}
+        .category-dropdown-control{position:relative}
+        #category-picker{width:100%;box-sizing:border-box;padding-right:44px;background:#fff;border:1px solid #999}
+        .category-dropdown-btn{position:absolute;right:0;top:0;bottom:0;width:42px;padding:0;border:0;background:transparent;cursor:pointer}
+        .category-dropdown-menu{display:none;position:absolute;top:100%;left:0;width:100%;max-height:min(60vh,480px);overflow:auto;background:#fff;border:1px solid #999;z-index:10}
+        .category-dropdown.open .category-dropdown-menu{display:block}
+        .dropdown-tree,.dropdown-tree-children,.tree-root,.tree-children{list-style:none;margin:0;padding:0}
+        .dropdown-tree-children,.tree-children{display:none;padding-left:22px}
+        .dropdown-tree-children.open,.tree-children.open{display:block}
+        .dropdown-tree-row,.tree-row{display:flex;align-items:center;min-height:36px}
+        .tree-toggle,.tree-spacer{flex:0 0 28px;width:28px;text-align:center}
+        .tree-toggle{border:0;background:none;cursor:pointer;padding:6px}
+        .category-option,.tree-node{flex:1;text-align:left;padding:7px 9px;border:0;background:transparent;color:inherit;font:inherit;cursor:pointer}
+        .category-option:hover,.tree-node:hover{background:#e8f1ff}
+        .category-option.selected,.tree-node.selected{background:#dce9f7}
+        #item-name{width:min(375px,100%);box-sizing:border-box}
+        #submit-btn{cursor:pointer}
+        #action-status{color:#b42318;min-height:1.2em}
+        #selected-info{margin:8px 0 16px;color:#555}
+        .tree-root{padding-left:0}
+        .empty-tree{color:#777}
+    </style>
+</head>
+<body>
+    <h1>Category Tree</h1>
+    <form id="action-form">
+        {% csrf_token %}
+        <div class="action-row">
+            <div class="category-dropdown" id="category-dropdown">
+                <div class="category-dropdown-control">
+                    <input id="category-picker" type="text" placeholder="Select a category or product" readonly aria-label="Selected category or product">
+                    <button type="button" class="category-dropdown-btn" id="category-dropdown-btn" aria-label="Open category tree">▼</button>
+                </div>
+                <div class="category-dropdown-menu">
+                    <ul class="dropdown-tree">
+                        {% for category in categories %}
+                            {% include "dropdown.html" with node=category %}
+                        {% endfor %}
+                        {% for product in uncategorized_products %}
+                            {% include "product_node.html" with product=product dropdown_mode=True %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <input type="hidden" id="selected-id">
+            <input type="hidden" id="selected-type">
+            <input
+                id="item-name"
+                type="text"
+                placeholder="Enter name"
+            >
+            <button type="submit" id="submit-btn">ok</button>
+        </div>
+        <p id="selected-info"></p>
+        <p id="action-status"></p>
+        <ul class="tree-root">
+            {% for category in categories %}
+                {% include "node.html" with node=category %}
+            {% empty %}
+                <li class="empty-tree">No categories found</li>
+            {% endfor %}
+        </ul>
+        {% if uncategorized_products %}
+            <ul class="tree-root">
+                {% for prod in uncategorized_products %}
+                    {% include "product_node.html" with prod=prod %}
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </form>
+    <script>
+document.addEventListener('DOMContentLoaded',function(){
+    var form=document.getElementById('action-form');
+    var nameInput=document.getElementById('item-name');
+    var status=document.getElementById('action-status');
+    var dropdown=document.getElementById('category-dropdown');
+    var pickerInput=document.getElementById('category-picker');
+    var selectedInfo=document.getElementById('selected-info');
+    var selectedNode=null;
+
+    function setSelectedStyle(node){
+        document.querySelectorAll('.category-option.selected,.tree-node.selected')
+            .forEach(function(item){item.classList.remove('selected');});
+        if(!node){return;}
+        document.querySelectorAll('[data-id="'+node.dataset.id+'"][data-type="'+node.dataset.type+'"]').forEach(function(item){
+            item.classList.add('selected');
+        });
+    }
+
+    function selectNode(node){
+        selectedNode={
+            id:node.dataset.id,
+            type:node.dataset.type,
+            name:node.dataset.name || node.textContent.trim()
+        };
+        document.getElementById('selected-id').value=selectedNode.id;
+        document.getElementById('selected-type').value=selectedNode.type;
+        pickerInput.value=selectedNode.name;
+        pickerInput.readOnly=false;
+        nameInput.value='';
+        selectedInfo.textContent='Selected: '+selectedNode.name;
+        setSelectedStyle(node);
+        status.textContent='';
+        dropdown.classList.remove('open');
+    }
+
+    pickerInput.addEventListener('input',function(){
+        if(!pickerInput.value.trim()){
+            selectedNode=null;
+            document.getElementById('selected-id').value='';
+            document.getElementById('selected-type').value='';
+            selectedInfo.textContent='';
+            setSelectedStyle(null);
+        }
+    });
+
+    document.getElementById('category-dropdown-btn').addEventListener('click',function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        dropdown.classList.toggle('open');
+    });
+
+    document.addEventListener('click',function(e){
+    var toggle=e.target.closest('.tree-toggle');
+        if(toggle){
+            e.preventDefault();
+            e.stopPropagation();
+            var li=toggle.closest('li');
+            if(!li){
+                return;
+            }
+            var children=li.querySelector(':scope > .dropdown-tree-children, :scope > .tree-children');
+            if(!children){
+                return;
+            }
+            var isOpen=children.classList.toggle('open');
+            toggle.textContent=isOpen?'▼':'▶';
+            toggle.setAttribute(
+                'aria-expanded',
+                isOpen?'true':'false'
+            );
+            return;
+        }
+
+        var option=e.target.closest('.category-option');
+
+        if(option && dropdown.contains(option)){
+            e.preventDefault();
+            e.stopPropagation();
+            selectNode(option);
+            return;
+        }
+
+        var node=e.target.closest('.tree-node');
+
+        if(node){
+            e.preventDefault();
+            e.stopPropagation();
+            selectNode(node);
+            return;
+        }
+
+        if(!dropdown.contains(e.target)){
+            dropdown.classList.remove('open');
+        }
+    });
+
+    function sendDatabaseUpdate(url,payload){
+        var csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;
+        return fetch(url,{
+            method:'POST',
+            headers:{
+                'Content-Type':'application/json',
+                'X-CSRFToken':csrf
+            },
+            body:JSON.stringify(payload)
+        })
+        .then(function(response){
+            if(!response.ok){
+                return response.json().then(function(result){
+                    throw new Error(result.error||'Request failed.');
+                });
+            }
+            return response.json();
+        })
+        .then(function(result){
+            return result;
+        })
+        .catch(function(error){
+            status.textContent='Could not save: '+error.message;
+            throw error;
+        });
+    }
+    form.addEventListener('submit',function(e){
+        e.preventDefault();
+        status.textContent='';
+        var childName=nameInput.value.trim();
+        var updatedName=pickerInput.value.trim();
+        var actions=[];
+
+        if(selectedNode && !updatedName && !childName){
+            status.textContent='Enter a name.';
+            return;
+        }
+
+        if(selectedNode && updatedName && updatedName!==selectedNode.name){
+            if(selectedNode.type==='category'){
+                actions.push({url:'/api/categories/',payload:{action:'update',category_id:selectedNode.id,name:updatedName}});
+            }else{
+                actions.push({url:'/api/product/',payload:{action:'update',product_id:selectedNode.id,name:updatedName}});
+            }
+        }
+
+        if(childName){
+            if(!selectedNode){
+                actions.push({url:'/api/categories/',payload:{action:'create_root',name:childName}});
+            }else if(selectedNode.type==='category'){
+                actions.push({url:'/api/categories/',payload:{action:'create_sub',parent_id:selectedNode.id,name:childName}});
+            }else{
+                actions.push({url:'/api/product/',payload:{action:'create_sub_product',parent_product_id:selectedNode.id,name:childName}});
+            }
+        }
+
+        if(!actions.length){
+            status.textContent=selectedNode?'No changes to save.':'Enter a name.';
+            return;
+        }
+
+        Promise.all(actions.map(function(action){
+            return sendDatabaseUpdate(action.url,action.payload);
+        })).then(function(){location.reload();}).catch(function(){});
+    });
+
+    document.querySelectorAll('.tree-node').forEach(function(node){
+        node.addEventListener('dblclick',function(){selectNode(node);pickerInput.focus();pickerInput.select();});
+    });
+});
+</script>
+</body>
+</html>

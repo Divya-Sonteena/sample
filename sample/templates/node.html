@@ -1,0 +1,16 @@
+<li>
+    <div class="tree-row">
+        <button type="button" class="tree-toggle" aria-expanded="{% if node.children or node.products %}true{% else %}false{% endif %}" aria-label="Expand {{ node.name|escape }}">{% if node.children or node.products %}▼{% else %}▶{% endif %}</button>
+        <button type="button" class="tree-node" data-id="{{ node.id }}" data-type="category" data-name="{{ node.name }}">{{ node.name }}</button>
+    </div>
+    {% if node.children or node.products %}
+        <ul class="tree-children open">
+            {% for child in node.children %}
+                {% include "node.html" with node=child %}
+            {% endfor %}
+            {% for product in node.products %}
+                {% include "product_node.html" with product=product %}
+            {% endfor %}
+        </ul>
+    {% endif %}
+</li>
